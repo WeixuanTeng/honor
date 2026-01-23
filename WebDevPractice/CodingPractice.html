@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>My Neighborhood</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Bootstrap -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <!-- GeoSearch (survey map search bar) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.1.0/dist/geosearch.css" />
+    <script src="https://unpkg.com/leaflet-geosearch@3.1.0/dist/bundle.min.js"></script>
+
+    <!-- Esri Leaflet + clustering (amenities layers) -->
+    <script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.0/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js"></script>
+
+    <style>
+      #myMap {
+        height: 520px;
+        width: 100%;
+      }
+
+      #amenityMap {
+        height: 520px;
+        width: 100%;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="jumbotron text-center">
+      <h1>My Neighborhood</h1>
+      <p>Resize this responsive page to see the effect!</p>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <!-- LEFT COLUMN -->
+        <div class="col-sm-4">
+          <h3>Questions</h3>
+          <p>Answer the following questions. Once you are done, click a Send button.</p>
+
+          <form id="foo" name="submit-to-google-sheet">
+            <p>
+              Q1. About how many years have you lived in the neighborhood?
+              <select id="liveyear" name="liveyear" class="custom-select mb-3">
+                <option selected>Select your answer</option>
+                <option value="-1">Less than 1 year</option>
+                <option value="+1">1 year to 5 years</option>
+                <option value="+3">5 years to 10 years</option>
+                <option value="+7">10 or more years</option>
+              </select>
+            </p>
+
+            <p>Q2. Do you feel like you are a part of your neighborhood (or community)?</p>
+            <select id="ownership" name="ownership" class="custom-select mb-3">
+              <option selected>Select your answer</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+
+            <label for="describe">Q3. In <b>one word</b>, please describe your neighborhood.</label>
+            <input id="describe" name="describe" type="text" class="form-control mb-2" />
+
+            <p class="mt-2">Click a place where you feel like this is your neighborhood</p>
+
+            <label for="lon">Longitude:</label>
+            <input id="lon" type="text" name="lon" class="form-control" placeholder="Longitude" readonly />
+
+            <label for="lat" class="mt-2">Latitude:</label>
+            <input id="lat" type="text" name="lat" class="form-control" placeholder="Latitude" readonly />
+
+            <br />
+            <div id="success" class="small text-muted"></div>
+            <button id="btn" type="submit" class="btn btn-primary mt-2">Send</button>
+          </form>
+
+          <script src="google-sheet_3.js"></script>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col-sm-8">
+
+          <h3>Survey map (click to fill lat/lon)</h5>
+          <div id="myMap"></div>
+
+          <h3 class="mt-3">Amenities map</h5>
+          <div id="amenityMap"></div>
+
+          <script src="surveymap.js"></script>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
