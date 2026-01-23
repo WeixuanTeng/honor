@@ -4,7 +4,6 @@ let amenitiesMap = null;
 let focusCircle = null;
 
 function initSurveyMap() {
-  // Match your screenshot: world view + OSM tiles
   const surveyMap = L.map("myMap").setView([47.6567, -122.3066], 11);
  
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -12,7 +11,6 @@ function initSurveyMap() {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(surveyMap);
 
-  // Search bar (same look as your screenshot)
   if (window.GeoSearch && GeoSearch.GeoSearchControl) {
     const provider = new GeoSearch.OpenStreetMapProvider();
     const searchControl = new GeoSearch.GeoSearchControl({
@@ -35,13 +33,11 @@ function initSurveyMap() {
     });
   }
 
-  // Click to set lon/lat
   surveyMap.on("click", function (evt) {
     setSurveyMarkerAndInputs(surveyMap, evt.latlng);
     setAmenitiesFocus(evt.latlng);
   });
 
-  // If Bootstrap/layout shifts, this prevents “blank map”
   setTimeout(function () {
     surveyMap.invalidateSize();
   }, 0);
@@ -66,7 +62,6 @@ function setSurveyMarkerAndInputs(map, latlng) {
 }
 
 function initAmenitiesMap() {
-  // Minimal basemap: no labels (keeps your colored cluster circles)
   amenitiesMap = L.map("amenityMap").setView([47.6062, -122.3321], 10);
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
@@ -104,10 +99,8 @@ function initAmenitiesMap() {
     })
   };
 
-  // Turn groceries on by default
   layers["Groceries (King County)"].addTo(amenitiesMap);
 
-  // Toggle control
   L.control.layers(null, layers, { collapsed: false }).addTo(amenitiesMap);
 
   setTimeout(function () {
