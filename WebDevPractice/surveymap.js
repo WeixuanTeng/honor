@@ -113,7 +113,7 @@ function addElevationToggle(mapInstance) {
    1) SURVEY MAP (top)
 ========================================================= */
 function initSurveyMap() {
-  const surveyMap = L.map("myMap").setView([47.285, -122.314], 11);
+  const surveyMap = L.map("myMap").setView([47.6567, -122.3066], 11);
 
   addCartoBase(surveyMap);
 
@@ -173,7 +173,7 @@ function setSurveyMarkerAndInputs(mapInstance, latlng) {
    2) AMENITIES MAP (middle)
 ========================================================= */
 function initAmenitiesMap() {
-  amenitiesMap = L.map("amenityMap").setView([47.6062, -122.3321], 10);
+  amenitiesMap = L.map("amenityMap").setView([47.6567, -122.3066], 10);
 
   addCartoBase(amenitiesMap);
   addElevationToggle(amenitiesMap);
@@ -336,7 +336,7 @@ function setAmenitiesFocus(latlng) {
    3) SCENARIO MAP (bottom)
 ========================================================= */
 function initScenarioMap() {
-  scenarioMap = L.map("scenarioMap").setView([47.285, -122.314], 11);
+  scenarioMap = L.map("scenarioMap").setView([47.6567, -122.3066], 11);
 
   addCartoBase(scenarioMap);
   addElevationToggle(scenarioMap);
