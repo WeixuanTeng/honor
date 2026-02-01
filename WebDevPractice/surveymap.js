@@ -173,7 +173,7 @@ function setSurveyMarkerAndInputs(mapInstance, latlng) {
    2) AMENITIES MAP (middle)
 ========================================================= */
 function initAmenitiesMap() {
-  amenitiesMap = L.map("amenityMap").setView([47.6567, -122.3066], 10);
+  amenitiesMap = L.map("amenityMap").setView([47.6567, -122.3066], 11);
 
   addCartoBase(amenitiesMap);
   addElevationToggle(amenitiesMap);
@@ -644,3 +644,4 @@ document.addEventListener("DOMContentLoaded", function () {
   initAmenitiesMap();
   initScenarioMap();
 });
+
