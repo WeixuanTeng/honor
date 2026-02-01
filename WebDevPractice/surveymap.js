@@ -435,10 +435,9 @@ function initScenarioMap() {
   const scenarioLayersControl = L.control.layers(
     null,
     overlays,
-    { collapsed: isMobileViewport() } // mobile starts collapsed
+    { collapsed: isMobileViewport() } 
   ).addTo(scenarioMap);
 
-  // ✅ Show/Hide button (mobile-friendly, JS only)
   addLayersPanelToggle(scenarioMap, scenarioLayersControl);
 
   scenarioMap.on("overlayadd", function () {
