@@ -1,6 +1,11 @@
 "use strict";
 
 /* ---------------------------
+   Default map focus (UW / Seattle)
+---------------------------- */
+const DEFAULT_CENTER = L.latLng(47.6567, -122.3066);
+
+/* ---------------------------
    15-minute walk settings
 ---------------------------- */
 const WALK_MINUTES = 15;
@@ -38,11 +43,71 @@ let surveyMarker = null;
 let scenarioMap = null;
 let scenarioMarker = null;
 
-// Default scenario origin = Federal Way / Seattle region
-let scenarioOrigin = L.latLng(47.285, -122.314);
+// Default scenario origin (same as default center)
+let scenarioOrigin = DEFAULT_CENTER;
 
 let scenarioRingLayers = null;
 let scenarioAmenityLayers = null;
+
+/* =========================================================
+   Small-screen helper
+========================================================= */
+function isMobileViewport() {
+  return (
+    window.matchMedia &&
+    window.matchMedia("(max-width: 600px)").matches
+  );
+}
+
+/* =========================================================
+   Show/Hide layers panel (JS only)
+   - hides the entire layers control on mobile by default
+   - adds a button to show/hide it
+========================================================= */
+function addLayersPanelToggle(mapInstance, layersControl) {
+  const container = layersControl.getContainer();
+  const isMobile = isMobileViewport();
+
+  let isVisible = !isMobile;
+
+  // Mobile: start hidden + make it scrollable when shown
+  if (isMobile) {
+    container.style.display = "none";
+    container.style.maxWidth = "86vw";
+    container.style.maxHeight = "55vh";
+    container.style.overflowY = "auto";
+  }
+
+  const control = L.control({ position: "bottomleft" });
+
+  control.onAdd = function () {
+    const wrapper = L.DomUtil.create("div", "leaflet-bar");
+    const button = L.DomUtil.create("a", "", wrapper);
+
+    button.href = "#";
+    button.title = "Show/Hide layer list";
+    button.textContent = isVisible ? "Hide layers" : "Show layers";
+
+    button.style.width = "auto";
+    button.style.padding = "0 10px";
+    button.style.lineHeight = "30px";
+    button.style.textDecoration = "none";
+
+    L.DomEvent.disableClickPropagation(wrapper);
+
+    L.DomEvent.on(button, "click", function (evt) {
+      L.DomEvent.preventDefault(evt);
+
+      isVisible = !isVisible;
+      container.style.display = isVisible ? "" : "none";
+      button.textContent = isVisible ? "Hide layers" : "Show layers";
+    });
+
+    return wrapper;
+  };
+
+  control.addTo(mapInstance);
+}
 
 /* =========================================================
    Shared basemaps
@@ -113,7 +178,7 @@ function addElevationToggle(mapInstance) {
    1) SURVEY MAP (top)
 ========================================================= */
 function initSurveyMap() {
-  const surveyMap = L.map("myMap").setView([47.6567, -122.3066], 11);
+  const surveyMap = L.map("myMap").setView(DEFAULT_CENTER, 11);
 
   addCartoBase(surveyMap);
 
@@ -173,7 +238,7 @@ function setSurveyMarkerAndInputs(mapInstance, latlng) {
    2) AMENITIES MAP (middle)
 ========================================================= */
 function initAmenitiesMap() {
-  amenitiesMap = L.map("amenityMap").setView([47.6567, -122.3066], 11);
+  amenitiesMap = L.map("amenityMap").setView(DEFAULT_CENTER, 10);
 
   addCartoBase(amenitiesMap);
   addElevationToggle(amenitiesMap);
@@ -199,9 +264,14 @@ function initAmenitiesMap() {
     pointOverlays["Groceries (King County)"].addTo(amenitiesMap);
   }
 
-  L.control
-    .layers(null, { ...pointOverlays, ...bufferOverlays }, { collapsed: false })
-    .addTo(amenitiesMap);
+  const amenitiesLayersControl = L.control.layers(
+    null,
+    { ...pointOverlays, ...bufferOverlays },
+    { collapsed: isMobileViewport() } // mobile starts collapsed
+  ).addTo(amenitiesMap);
+
+  // ✅ Show/Hide button (mobile-friendly, JS only)
+  addLayersPanelToggle(amenitiesMap, amenitiesLayersControl);
 
   amenitiesMap.on("overlayadd", function (e) {
     const match = bufferPairs.find(function (p) {
@@ -336,7 +406,7 @@ function setAmenitiesFocus(latlng) {
    3) SCENARIO MAP (bottom)
 ========================================================= */
 function initScenarioMap() {
-  scenarioMap = L.map("scenarioMap").setView([47.6567, -122.3066], 11);
+  scenarioMap = L.map("scenarioMap").setView(DEFAULT_CENTER, 11);
 
   addCartoBase(scenarioMap);
   addElevationToggle(scenarioMap);
@@ -361,7 +431,15 @@ function initScenarioMap() {
   }
 
   const overlays = { ...scenarioRingLayers, ...scenarioAmenityLayers };
-  L.control.layers(null, overlays, { collapsed: false }).addTo(scenarioMap);
+
+  const scenarioLayersControl = L.control.layers(
+    null,
+    overlays,
+    { collapsed: isMobileViewport() } // mobile starts collapsed
+  ).addTo(scenarioMap);
+
+  // ✅ Show/Hide button (mobile-friendly, JS only)
+  addLayersPanelToggle(scenarioMap, scenarioLayersControl);
 
   scenarioMap.on("overlayadd", function () {
     redrawScenarioRings();
@@ -589,7 +667,6 @@ function getAmenitySources() {
       popupFields: ["NAME", "FEATUREDES", "ADDRESS", "DISTRICT", "ZIPCODE"],
       bufferColor: "#ff7f00",
     },
-
     {
       label: "Parks (King County)",
       url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/recreatn__park_label_point/MapServer/884",
@@ -644,4 +721,3 @@ document.addEventListener("DOMContentLoaded", function () {
   initAmenitiesMap();
   initScenarioMap();
 });
-
