@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>My Neighborhood</title>
+    <title>The 15 Min Neighborhood Survey</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -62,11 +62,15 @@
     </style>
   </head>
 
-  <body>
-    <div class="jumbotron text-center">
-      <h1>My Neighborhood</h1>
-      <p>Resize this responsive page to see the effect!</p>
-    </div>
+<div class="jumbotron text-center">
+  <h1>The 15 Min Neighborhood Survey</h1>
+  <p class="lead mb-1">
+    This interactive survey map helps us understand how people experience their neighborhood and whether daily needs feel reachable within a 15-minute walk.
+  </p>
+  <p class="mb-0">
+    If you have a minute, please click the map to mark your neighborhood, answer the questions on the left, and press <strong>Send</strong>. Thank you for participating!
+  </p>
+</div>
 
     <div class="container">
       <div class="row">
@@ -74,8 +78,11 @@
         <div class="col-sm-4">
           <h3>Questions</h3>
           <p>
-            Answer the following questions. Once you are done, click a Send
-            button.
+            Please take 1–2 minutes to answer the questions below. To include your location, click on the survey map (right) to auto-fill latitude/longitude, then press <strong>Send</strong>.
+            Thanks for helping improve this project!
+          </p>
+          <p class="small text-muted">
+            Please avoid sharing personal identifying information. Your map click is used only to capture an approximate point for analysis.
           </p>
 
           <form id="foo" name="submit-to-google-sheet">
@@ -111,7 +118,7 @@
             />
 
             <p class="mt-2">
-              Click a place where you feel like this is your neighborhood
+              Click a place on the first map where you feel like this is your neighborhood
             </p>
 
             <label for="lon">Longitude:</label>
@@ -147,7 +154,7 @@
 
         <!-- RIGHT COLUMN -->
         <div class="col-sm-8">
-          <h3>Column 2</h3>
+          <h3>Please click on the first map, the other maps are for refrence!</h3>
           <p></p>
 
           <h5>Survey map (click to fill lat/lon)</h5>
@@ -156,7 +163,7 @@
           <div id="amenityMap"></div>
 
           <h5 class="mt-3">
-            Transportation scenarios inclusion map (Please Click On Map)
+            Transportation scenarios inclusion map (Please Click On Map to see the result)
           </h5>
           <div id="scenarioMap"></div>
 
