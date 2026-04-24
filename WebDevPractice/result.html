@@ -6,22 +6,13 @@
   <title>15-Min Neighborhood Survey Results</title>
 
   <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Esri Leaflet + clustering (amenities + scenario amenities) -->
+  <!-- Esri Leaflet + clustering -->
   <script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css"
-  />
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.0/dist/leaflet.markercluster.js"></script>
   <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js"></script>
 
@@ -115,6 +106,10 @@
       overflow: hidden;
     }
 
+    .map-small {
+      height: 280px;
+    }
+
     ul.clean-list {
       list-style: none;
       padding: 0;
@@ -190,6 +185,10 @@
       .map {
         height: 380px;
       }
+
+      .map-small {
+        height: 300px;
+      }
     }
   </style>
 </head>
@@ -250,12 +249,31 @@
         <h2>Most common biggest access problems</h2>
         <p class="list-note">Which daily need is the biggest problem most often?</p>
         <ul id="problemList" class="clean-list"></ul>
+
+        <div id="otherBreakdown" style="display:none; margin-top:12px;">
+          <h3 style="margin: 0 0 6px 0; font-size: 1.05rem;">What “Other” includes</h3>
+          <p class="list-note" style="margin-top:0;">
+            From the open-ended “new place + why” responses (only for people who chose <strong>Other</strong>).
+          </p>
+          <ul id="otherList" class="clean-list"></ul>
+
+          <p class="list-note" style="margin-top:12px; margin-bottom:6px;"><strong>Example responses</strong></p>
+          <ul id="otherExamples" class="clean-list"></ul>
+        </div>
       </div>
 
       <div class="card list-card">
         <h2>Most common travel modes</h2>
         <p class="list-note">How do people usually reach daily needs?</p>
         <ul id="modeList" class="clean-list"></ul>
+
+        <div style="margin-top:14px;">
+          <h3 style="margin: 0 0 6px 0; font-size: 1.05rem;">Years lived in the neighborhood</h3>
+          <p class="list-note" style="margin-top:0;">
+            Each point is one response, colored by how long the respondent has lived there.
+          </p>
+          <div id="tenureMap" class="map map-small"></div>
+        </div>
       </div>
     </section>
 
@@ -285,9 +303,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <script>
-    /* ===========================
-       Survey-results maps
-    =========================== */
     const DEFAULT_CENTER = [47.6567, -122.3066];
 
     const problemColors = {
@@ -316,9 +331,9 @@
         renderSummary(rows);
         buildResponseMap(rows);
         buildGapMap(rows);
+        buildTenureMap(rows);
         renderLists(rows);
 
-        // Reference maps (not dependent on rows)
         buildAmenitiesMap();
         buildScenarioMap();
       } catch (error) {
@@ -361,7 +376,8 @@
         mode: String(row["Q5 usual mode"] || "").trim(),
         biggestProblem: String(row["Q4 biggest access problem"] || "").trim(),
         avoidConditions: String(row["Q10 avoid conditions"] || "").trim(),
-        dailyNeed: String(row["Q1 daily need used most"] || "").trim()
+        dailyNeed: String(row["Q1 daily need used most"] || "").trim(),
+        newPlace: String(row["Q13 new place + why"] || "").trim()
       };
 
       mapped.problemKey = normalizeProblem(mapped.biggestProblem);
@@ -468,8 +484,8 @@
         const div = document.createElement("div");
         div.className = "card";
         div.innerHTML = `
-          <div class="stat-label">${card.label}</div>
-          <div class="stat-value">${card.value}</div>
+          <div class="stat-label">${escapeHtml(card.label)}</div>
+          <div class="stat-value">${escapeHtml(card.value)}</div>
         `;
         container.appendChild(div);
       });
@@ -494,11 +510,11 @@
         })
           .addTo(map)
           .bindPopup(`
-            <strong>${row.problemLabel} is the biggest access problem</strong><br>
-            <strong>Daily need used most:</strong> ${row.dailyNeed || "N/A"}<br>
-            <strong>Usual mode:</strong> ${row.modeLabel || "N/A"}<br>
-            <strong>Belonging:</strong> ${row.belonged || "N/A"}<br>
-            <strong>Neighborhood described as:</strong> ${row.describe || "N/A"}<br>
+            <strong>${escapeHtml(row.problemLabel)} is the biggest access problem</strong><br>
+            <strong>Daily need used most:</strong> ${escapeHtml(row.dailyNeed || "N/A")}<br>
+            <strong>Usual mode:</strong> ${escapeHtml(row.modeLabel || "N/A")}<br>
+            <strong>Belonging:</strong> ${escapeHtml(row.belonged || "N/A")}<br>
+            <strong>Neighborhood described as:</strong> ${escapeHtml(row.describe || "N/A")}<br>
             <strong>Coordinates:</strong> ${row.lat.toFixed(4)}, ${row.lon.toFixed(4)}
           `);
       });
@@ -534,11 +550,11 @@
           .bindPopup(`
             <strong>Missing daily needs within 15 min:</strong> ${row.noCount}<br>
             <strong>Not sure:</strong> ${row.notSureCount}<br>
-            <strong>Grocery:</strong> ${row.grocery15 || "N/A"}<br>
-            <strong>Clinic:</strong> ${row.clinic15 || "N/A"}<br>
-            <strong>School:</strong> ${row.school15 || "N/A"}<br>
-            <strong>Park:</strong> ${row.park15 || "N/A"}<br>
-            <strong>Suggested help:</strong> ${row.nearMissHelp || "N/A"}
+            <strong>Grocery:</strong> ${escapeHtml(row.grocery15 || "N/A")}<br>
+            <strong>Clinic:</strong> ${escapeHtml(row.clinic15 || "N/A")}<br>
+            <strong>School:</strong> ${escapeHtml(row.school15 || "N/A")}<br>
+            <strong>Park:</strong> ${escapeHtml(row.park15 || "N/A")}<br>
+            <strong>Suggested help:</strong> ${escapeHtml(row.nearMissHelp || "N/A")}
           `);
       });
 
@@ -548,6 +564,66 @@
         ["2 missing", "#fb923c"],
         ["3 or 4 missing", "#ef4444"]
       ]);
+    }
+
+    function buildTenureMap(rows) {
+      const map = L.map("tenureMap").setView(DEFAULT_CENTER, 11);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      const tenureColors = {
+        "<1 year": "#ef4444",
+        "1–5 years": "#f97316",
+        "5–10 years": "#eab308",
+        "10+ years": "#22c55e",
+        "Not answered": "#6b7280"
+      };
+
+      rows.forEach((row) => {
+        const tenureLabel = normalizeTenure(row.liveyear);
+        const color = tenureColors[tenureLabel] || tenureColors["Not answered"];
+
+        L.circleMarker([row.displayLat, row.displayLon], {
+          radius: 6,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.85,
+          weight: 1
+        })
+          .addTo(map)
+          .bindPopup(`
+            <strong>Years lived:</strong> ${escapeHtml(tenureLabel)}<br>
+            <strong>Belonging:</strong> ${escapeHtml(row.belonged || "N/A")}<br>
+            <strong>Biggest access problem:</strong> ${escapeHtml(row.problemLabel || "N/A")}
+          `);
+      });
+
+      addLegend(map, "Years lived", [
+        ["<1 year", tenureColors["<1 year"]],
+        ["1–5 years", tenureColors["1–5 years"]],
+        ["5–10 years", tenureColors["5–10 years"]],
+        ["10+ years", tenureColors["10+ years"]],
+        ["Not answered", tenureColors["Not answered"]]
+      ]);
+    }
+
+    function normalizeTenure(value) {
+      const v = String(value || "").trim().toLowerCase();
+
+      if (v === "-1") return "<1 year";
+      if (v === "+1") return "1–5 years";
+      if (v === "+3") return "5–10 years";
+      if (v === "+7") return "10+ years";
+
+      if (v.includes("less than 1")) return "<1 year";
+      if (v.includes("1 year") && v.includes("5")) return "1–5 years";
+      if (v.includes("5 years") && v.includes("10")) return "5–10 years";
+      if (v.includes("10") || v.includes("or more")) return "10+ years";
+
+      if (!v || v === "select your answer" || v === "select") return "Not answered";
+      return "Not answered";
     }
 
     function gapColor(noCount) {
@@ -562,13 +638,13 @@
 
       legend.onAdd = function () {
         const div = L.DomUtil.create("div", "legend-box");
-        let html = `<strong>${title}</strong>`;
+        let html = `<strong>${escapeHtml(title)}</strong>`;
 
         rows.forEach((row) => {
           html += `
             <div class="legend-row">
               <span class="legend-color" style="background:${row[1]}"></span>
-              <span>${row[0]}</span>
+              <span>${escapeHtml(row[0])}</span>
             </div>
           `;
         });
@@ -590,6 +666,8 @@
       renderList("modeList", modeCounts);
       renderList("avoidList", avoidCounts);
       renderList("helpList", helpCounts);
+
+      renderOtherBreakdown(rows);
     }
 
     function countBy(rows, key) {
@@ -632,7 +710,7 @@
       entries.forEach(([name, count]) => {
         const li = document.createElement("li");
         li.innerHTML = `
-          <span class="item-name">${formatLabel(name)}</span>
+          <span class="item-name">${escapeHtml(formatLabel(name))}</span>
           <span class="item-count">${count}</span>
         `;
         container.appendChild(li);
@@ -645,12 +723,102 @@
         .replace(/\b\w/g, (char) => char.toUpperCase());
     }
 
+    function renderOtherBreakdown(rows) {
+      const wrapper = document.getElementById("otherBreakdown");
+      const list = document.getElementById("otherList");
+      const examplesList = document.getElementById("otherExamples");
+      if (!wrapper || !list || !examplesList) return;
+
+      const otherRows = rows.filter((r) => r.problemKey === "other");
+      if (!otherRows.length) {
+        wrapper.style.display = "none";
+        return;
+      }
+
+      const themeCounts = {};
+      const examples = [];
+
+      otherRows.forEach((r) => {
+        const text = String(r.newPlace || "").trim();
+        const themes = extractOtherThemes(text);
+
+        themes.forEach((t) => {
+          themeCounts[t] = (themeCounts[t] || 0) + 1;
+        });
+
+        if (text && examples.length < 6) {
+          examples.push(text);
+        }
+      });
+
+      if (!Object.keys(themeCounts).length) {
+        themeCounts["Unspecified / no text"] = otherRows.length;
+      }
+
+      list.innerHTML = "";
+      Object.entries(themeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([name, count]) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <span class="item-name">${escapeHtml(name)}</span>
+            <span class="item-count">${count}</span>
+          `;
+          list.appendChild(li);
+        });
+
+      examplesList.innerHTML = "";
+      if (examples.length === 0) {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="item-name">No examples provided.</span>`;
+        examplesList.appendChild(li);
+      } else {
+        examples.forEach((t) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="item-name">“${escapeHtml(truncateText(t, 120))}”</span>`;
+          examplesList.appendChild(li);
+        });
+      }
+
+      wrapper.style.display = "";
+    }
+
+    function extractOtherThemes(text) {
+      const t = String(text || "").toLowerCase();
+      if (!t) return [];
+
+      const themes = [];
+
+      if (/(bus|transit|metro|route|light rail|rail|train|link)/.test(t)) themes.push("Transit frequency / access");
+      if (/(safe|safety|crime|danger|harass|violence|shoot)/.test(t)) themes.push("Safety concerns");
+      if (/(sidewalk|walkway|pedestrian|missing sidewalk)/.test(t)) themes.push("Sidewalk quality / gaps");
+      if (/(crosswalk|crossing|intersection|signal)/.test(t)) themes.push("Crossings / intersections");
+      if (/(traffic|cars|speeding|stroad|parking)/.test(t)) themes.push("Traffic stress / speeding");
+      if (/(bike|bicycle|lane|protected lane|scooter)/.test(t)) themes.push("Bike / micromobility infrastructure");
+      if (/(light|lighting|dark)/.test(t)) themes.push("Lighting");
+      if (/(hill|steep)/.test(t)) themes.push("Steep hills");
+
+      if (/(grocery|supermarket|store|market)/.test(t)) themes.push("More grocery options");
+      if (/(clinic|doctor|hospital|health)/.test(t)) themes.push("More health/clinic options");
+      if (/(park|green|trail)/.test(t)) themes.push("More parks / green space");
+      if (/(school|childcare|daycare)/.test(t)) themes.push("Schools / childcare");
+
+      if (themes.length === 0) themes.push("uncategorized");
+
+      return themes.slice(0, 2);
+    }
+
+    function truncateText(text, maxLen) {
+      const s = String(text || "").trim();
+      if (s.length <= maxLen) return s;
+      return s.slice(0, maxLen - 1) + "…";
+    }
+
     /* ===========================
        Amenities + scenario maps
     =========================== */
-
     const WALK_MINUTES = 15;
-    const WALK_SPEED_METERS_PER_MIN = 80; // ~3 mph
+    const WALK_SPEED_METERS_PER_MIN = 80;
     const WALK_BUFFER_RADIUS_M = WALK_MINUTES * WALK_SPEED_METERS_PER_MIN;
 
     const SCENARIOS = [
@@ -772,15 +940,6 @@
       return html || "<em>No details</em>";
     }
 
-    function escapeHtml(text) {
-      return String(text || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
     function makeClusterLayerWithBuffers(mapInstance, config) {
       const fields = [config.idField].concat(config.popupFields);
       const bufferLayer = L.layerGroup();
@@ -858,7 +1017,6 @@
         bufferPairs.push({ ...pair, label: src.label });
       }
 
-      // Default layer
       if (pointOverlays["Groceries (King County)"]) {
         pointOverlays["Groceries (King County)"].addTo(map);
       }
@@ -901,7 +1059,6 @@
     }
 
     /* -------- Scenario map -------- */
-
     let scenarioOrigin = L.latLng(DEFAULT_CENTER[0], DEFAULT_CENTER[1]);
     let scenarioRingLayers = null;
     let scenarioAmenityLayers = null;
@@ -922,7 +1079,6 @@
         scenarioAmenityLayers[sources[j].label] = L.layerGroup();
       }
 
-      // Default overlays
       scenarioRingLayers[SCENARIOS[0].label].addTo(map);
       scenarioRingLayers[SCENARIOS[1].label].addTo(map);
       if (scenarioAmenityLayers["Groceries (King County)"]) {
@@ -1092,6 +1248,15 @@
           }
         });
       }
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
   </script>
 </body>
