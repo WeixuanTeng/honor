@@ -1,57 +1,1098 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>15-Min Neighborhood Survey Results</title>
 
-<!-- Load d3.js -->
-<script src="https://d3js.org/d3.v4.js"></script>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Load d3-cloud -->
-<script src="https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/LIB/d3.layout.cloud.js"></script>
+  <!-- Esri Leaflet + clustering (amenities + scenario amenities) -->
+  <script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.0/dist/MarkerCluster.Default.css"
+  />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.0/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/esri-leaflet-cluster@3.0.1/dist/esri-leaflet-cluster.js"></script>
 
-<!-- Create a div where the graph will take place -->
-<div id="my_dataviz"></div>
-<script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f7fa;
+      color: #1f2937;
+    }
 
-// List of words
-var myWords = ["Hello", "Everybody", "How", "Are", "You", "Today", "It", "Is", "A", "Lovely", "Day", "I", "Love", "Coding", "In", "My", "Van", "Mate"]
+    header {
+      background: #0f172a;
+      color: white;
+      padding: 24px 20px;
+    }
 
-// set the dimensions and margins of the graph
-var margin = {top: 10, right: 10, bottom: 10, left: 10},
-    width = 450 - margin.left - margin.right,
-    height = 450 - margin.top - margin.bottom;
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.9rem;
+    }
 
-// append the svg object to the body of the page
-var svg = d3.select("#my_dataviz").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
+    header p {
+      margin: 0;
+      max-width: 980px;
+      line-height: 1.5;
+      color: #dbe4ee;
+    }
 
-// Constructs a new cloud layout instance. It run an algorithm to find the position of words that suits your requirements
-var layout = d3.layout.cloud()
-  .size([width, height])
-  .words(myWords.map(function(d) { return {text: d}; }))
-  .padding(10)
-  .fontSize(60)
-  .on("end", draw);
-layout.start();
+    main {
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-// This function takes the output of 'layout' above and draw the words
-// Better not to touch it. To change parameters, play with the 'layout' variable above
-function draw(words) {
-  svg
-    .append("g")
-      .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
-      .selectAll("text")
-        .data(words)
-      .enter().append("text")
-        .style("font-size", function(d) { return d.size + "px"; })
-        .attr("text-anchor", "middle")
-        .attr("transform", function(d) {
-          return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+    .status {
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 0.95rem;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .map-grid,
+    .list-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .map-card h2,
+    .list-card h2 {
+      margin: 0 0 8px 0;
+    }
+
+    .map-note,
+    .list-note {
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      margin: 0 0 12px 0;
+    }
+
+    .map {
+      height: 470px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    ul.clean-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    ul.clean-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    ul.clean-list li:last-child {
+      border-bottom: none;
+    }
+
+    .item-name {
+      color: #111827;
+    }
+
+    .item-count {
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    .legend-box {
+      background: white;
+      padding: 10px 12px;
+      line-height: 1.5;
+      color: #111827;
+      border-radius: 6px;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+      font-size: 13px;
+    }
+
+    .legend-box strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .legend-color {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    footer {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px 30px 20px;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 900px) {
+      .map-grid,
+      .list-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .map {
+        height: 380px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>15-Min Neighborhood Survey Results</h1>
+    <p>
+      This dashboard summarizes survey responses collected for research on the possibility of a 15-minute life cycle in Seattle.
+      It includes (1) response patterns from the survey, and (2) reference maps showing amenities and a simple “transportation scenario inclusion”
+      model (click to set a starting point and see what amenities are reachable under different travel assumptions).
+    </p>
+  </header>
+
+  <main>
+    <div id="status" class="status">Loading survey results...</div>
+
+    <section class="summary-grid" id="summaryGrid"></section>
+
+    <section class="map-grid">
+      <div class="card map-card">
+        <h2>Map 1: Where responses came from</h2>
+        <p class="map-note">
+          Each point is one survey response. Colors show the respondent’s <strong>biggest access problem</strong>.
+        </p>
+        <div id="responseMap" class="map"></div>
+      </div>
+
+      <div class="card map-card">
+        <h2>Map 2: 15-minute access gaps</h2>
+        <p class="map-note">
+          Circle size and color show how many daily needs are <strong>not within 15 minutes</strong> (grocery / clinic / school / park).
+        </p>
+        <div id="gapMap" class="map"></div>
+      </div>
+    </section>
+
+    <section class="map-grid">
+      <div class="card map-card">
+        <h2>Map 3: Amenities reference map</h2>
+        <p class="map-note">
+          Toggle layers to compare amenities. You can also turn on “15-min walk buffer” layers to see coverage areas.
+        </p>
+        <div id="amenityMap" class="map"></div>
+      </div>
+
+      <div class="card map-card">
+        <h2>Map 4: Transportation scenarios inclusion map</h2>
+        <p class="map-note">
+          Click to set a starting point. Scenario rings show reach under different assumptions, and amenity points are highlighted if reachable.
+        </p>
+        <div id="scenarioMap" class="map"></div>
+      </div>
+    </section>
+
+    <section class="list-grid">
+      <div class="card list-card">
+        <h2>Most common biggest access problems</h2>
+        <p class="list-note">Which daily need is the biggest problem most often?</p>
+        <ul id="problemList" class="clean-list"></ul>
+      </div>
+
+      <div class="card list-card">
+        <h2>Most common travel modes</h2>
+        <p class="list-note">How do people usually reach daily needs?</p>
+        <ul id="modeList" class="clean-list"></ul>
+      </div>
+    </section>
+
+    <section class="list-grid">
+      <div class="card list-card">
+        <h2>Conditions people avoid most</h2>
+        <p class="list-note">These are the most common route/condition concerns.</p>
+        <ul id="avoidList" class="clean-list"></ul>
+      </div>
+
+      <div class="card list-card">
+        <h2>Suggested improvements</h2>
+        <p class="list-note">What changes would help “near-miss” neighborhoods feel achievable?</p>
+        <ul id="helpList" class="clean-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      Tip: open this page through Live Server (or any local web server) so the Excel file can load correctly.
+      This page reads <strong>honor result.xlsx</strong> from the same folder.
+    </p>
+  </footer>
+
+  <!-- Excel reader -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <script>
+    /* ===========================
+       Survey-results maps
+    =========================== */
+    const DEFAULT_CENTER = [47.6567, -122.3066];
+
+    const problemColors = {
+      grocery: "#dc2626",
+      clinic: "#f97316",
+      school: "#2563eb",
+      park: "#16a34a",
+      other: "#6b7280"
+    };
+
+    document.addEventListener("DOMContentLoaded", init);
+
+    async function init() {
+      try {
+        const rows = await loadSurveyData();
+
+        if (!rows.length) {
+          document.getElementById("status").textContent =
+            "No valid survey rows were found.";
+          return;
+        }
+
+        document.getElementById("status").textContent =
+          `Loaded ${rows.length} valid survey responses.`;
+
+        renderSummary(rows);
+        buildResponseMap(rows);
+        buildGapMap(rows);
+        renderLists(rows);
+
+        // Reference maps (not dependent on rows)
+        buildAmenitiesMap();
+        buildScenarioMap();
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").textContent =
+          'Could not load the results file. Make sure "honor result.xlsx" is in the same folder as this page, and open using Live Server.';
+      }
+    }
+
+    async function loadSurveyData() {
+      const response = await fetch("./honor%20result.xlsx");
+      if (!response.ok) throw new Error("Failed to load Excel file.");
+
+      const buffer = await response.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+
+      const cleanedRows = rawRows
+        .map(cleanRow)
+        .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lon));
+
+      applyCoordinateJitter(cleanedRows);
+      return cleanedRows;
+    }
+
+    function cleanRow(row) {
+      const mapped = {
+        timestamp: String(row["timestamp"] || "").trim(),
+        liveyear: String(row["liveyear"] || "").trim(),
+        belonged: String(row["Feeling belonged?"] || "").trim(),
+        describe: String(row["describe"] || "").trim(),
+        lon: parseFloat(row["lon"]),
+        lat: parseFloat(row["lat"]),
+        school15: String(row["Q3 school within 15 min"] || "").trim(),
+        clinic15: String(row["Q3 clinic within 15 min"] || "").trim(),
+        grocery15: String(row["Q3 grocery within 15 min"] || "").trim(),
+        park15: String(row["Q3 park within 15 min"] || "").trim(),
+        nearMissHelp: String(row["Q9 near-miss help (up to 2)"] || "").trim(),
+        mode: String(row["Q5 usual mode"] || "").trim(),
+        biggestProblem: String(row["Q4 biggest access problem"] || "").trim(),
+        avoidConditions: String(row["Q10 avoid conditions"] || "").trim(),
+        dailyNeed: String(row["Q1 daily need used most"] || "").trim()
+      };
+
+      mapped.problemKey = normalizeProblem(mapped.biggestProblem);
+      mapped.problemLabel = problemLabel(mapped.problemKey);
+      mapped.modeLabel = normalizeMode(mapped.mode);
+
+      mapped.noCount = countNoAnswers(mapped);
+      mapped.notSureCount = countNotSureAnswers(mapped);
+
+      return mapped;
+    }
+
+    function normalizeProblem(value) {
+      const text = String(value || "").toLowerCase().trim();
+      if (text.includes("grocery") || text.includes("杂货")) return "grocery";
+      if (text.includes("clinic")) return "clinic";
+      if (text.includes("school")) return "school";
+      if (text.includes("park")) return "park";
+      return "other";
+    }
+
+    function problemLabel(problemKey) {
+      if (problemKey === "grocery") return "Grocery";
+      if (problemKey === "clinic") return "Clinic";
+      if (problemKey === "school") return "School";
+      if (problemKey === "park") return "Park";
+      return "Other";
+    }
+
+    function normalizeMode(value) {
+      const text = String(value || "").trim();
+      if (text === "公交+步行") return "Bus + walk";
+      return text || "Not answered";
+    }
+
+    function isYes(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return text === "yes" || text === "是的" || text === "是";
+    }
+
+    function isNo(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return text === "no";
+    }
+
+    function isNotSure(value) {
+      const text = String(value || "").trim().toLowerCase();
+      return text.includes("not sure");
+    }
+
+    function countNoAnswers(row) {
+      const values = [row.grocery15, row.clinic15, row.school15, row.park15];
+      return values.filter((value) => isNo(value)).length;
+    }
+
+    function countNotSureAnswers(row) {
+      const values = [row.grocery15, row.clinic15, row.school15, row.park15];
+      return values.filter((value) => isNotSure(value)).length;
+    }
+
+    function applyCoordinateJitter(rows) {
+      const groups = {};
+      rows.forEach((row) => {
+        const key = `${row.lat.toFixed(6)},${row.lon.toFixed(6)}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      Object.values(groups).forEach((group) => {
+        if (group.length === 1) {
+          group[0].displayLat = group[0].lat;
+          group[0].displayLon = group[0].lon;
+          return;
+        }
+
+        group.forEach((row, index) => {
+          const angle = (2 * Math.PI * index) / group.length;
+          const offset = 0.0012;
+          row.displayLat = row.lat + Math.sin(angle) * offset;
+          row.displayLon = row.lon + Math.cos(angle) * offset;
+        });
+      });
+    }
+
+    function renderSummary(rows) {
+      const total = rows.length;
+      const belongYes = rows.filter((row) => isYes(row.belonged)).length;
+      const groceryYes = rows.filter((row) => isYes(row.grocery15)).length;
+      const topProblem = getTopEntry(countBy(rows, "problemLabel"));
+      const topMode = getTopEntry(countBy(rows, "modeLabel"));
+
+      const cards = [
+        { label: "Valid responses", value: total },
+        { label: "Feel they belong", value: `${Math.round((belongYes / total) * 100)}%` },
+        { label: "Grocery within 15 min", value: `${Math.round((groceryYes / total) * 100)}%` },
+        { label: "Top access problem", value: topProblem ? topProblem.name : "N/A" },
+        { label: "Most common mode", value: topMode ? topMode.name : "N/A" }
+      ];
+
+      const container = document.getElementById("summaryGrid");
+      container.innerHTML = "";
+
+      cards.forEach((card) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <div class="stat-label">${card.label}</div>
+          <div class="stat-value">${card.value}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function buildResponseMap(rows) {
+      const map = L.map("responseMap").setView(DEFAULT_CENTER, 11);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      rows.forEach((row) => {
+        const color = problemColors[row.problemKey] || problemColors.other;
+
+        L.circleMarker([row.displayLat, row.displayLon], {
+          radius: 7,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.85,
+          weight: 1
         })
-        .text(function(d) { return d.text; });
-}
-</script>
+          .addTo(map)
+          .bindPopup(`
+            <strong>${row.problemLabel} is the biggest access problem</strong><br>
+            <strong>Daily need used most:</strong> ${row.dailyNeed || "N/A"}<br>
+            <strong>Usual mode:</strong> ${row.modeLabel || "N/A"}<br>
+            <strong>Belonging:</strong> ${row.belonged || "N/A"}<br>
+            <strong>Neighborhood described as:</strong> ${row.describe || "N/A"}<br>
+            <strong>Coordinates:</strong> ${row.lat.toFixed(4)}, ${row.lon.toFixed(4)}
+          `);
+      });
+
+      addLegend(map, "Biggest access problem", [
+        ["Grocery", problemColors.grocery],
+        ["Clinic", problemColors.clinic],
+        ["School", problemColors.school],
+        ["Park", problemColors.park],
+        ["Other", problemColors.other]
+      ]);
+    }
+
+    function buildGapMap(rows) {
+      const map = L.map("gapMap").setView(DEFAULT_CENTER, 11);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      rows.forEach((row) => {
+        const color = gapColor(row.noCount);
+        const radius = 6 + row.noCount * 4 + row.notSureCount * 2;
+
+        L.circleMarker([row.displayLat, row.displayLon], {
+          radius: radius,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.6,
+          weight: 1
+        })
+          .addTo(map)
+          .bindPopup(`
+            <strong>Missing daily needs within 15 min:</strong> ${row.noCount}<br>
+            <strong>Not sure:</strong> ${row.notSureCount}<br>
+            <strong>Grocery:</strong> ${row.grocery15 || "N/A"}<br>
+            <strong>Clinic:</strong> ${row.clinic15 || "N/A"}<br>
+            <strong>School:</strong> ${row.school15 || "N/A"}<br>
+            <strong>Park:</strong> ${row.park15 || "N/A"}<br>
+            <strong>Suggested help:</strong> ${row.nearMissHelp || "N/A"}
+          `);
+      });
+
+      addLegend(map, "Missing needs within 15 min", [
+        ["0 missing", "#22c55e"],
+        ["1 missing", "#facc15"],
+        ["2 missing", "#fb923c"],
+        ["3 or 4 missing", "#ef4444"]
+      ]);
+    }
+
+    function gapColor(noCount) {
+      if (noCount === 0) return "#22c55e";
+      if (noCount === 1) return "#facc15";
+      if (noCount === 2) return "#fb923c";
+      return "#ef4444";
+    }
+
+    function addLegend(map, title, rows) {
+      const legend = L.control({ position: "bottomright" });
+
+      legend.onAdd = function () {
+        const div = L.DomUtil.create("div", "legend-box");
+        let html = `<strong>${title}</strong>`;
+
+        rows.forEach((row) => {
+          html += `
+            <div class="legend-row">
+              <span class="legend-color" style="background:${row[1]}"></span>
+              <span>${row[0]}</span>
+            </div>
+          `;
+        });
+
+        div.innerHTML = html;
+        return div;
+      };
+
+      legend.addTo(map);
+    }
+
+    function renderLists(rows) {
+      const problemCounts = countBy(rows, "problemLabel");
+      const modeCounts = countBy(rows, "modeLabel");
+      const avoidCounts = countMulti(rows, "avoidConditions");
+      const helpCounts = countMulti(rows, "nearMissHelp");
+
+      renderList("problemList", problemCounts);
+      renderList("modeList", modeCounts);
+      renderList("avoidList", avoidCounts);
+      renderList("helpList", helpCounts);
+    }
+
+    function countBy(rows, key) {
+      const counts = {};
+      rows.forEach((row) => {
+        const value = String(row[key] || "").trim();
+        if (!value || value.toLowerCase() === "nan") return;
+        counts[value] = (counts[value] || 0) + 1;
+      });
+      return counts;
+    }
+
+    function countMulti(rows, key) {
+      const counts = {};
+      rows.forEach((row) => {
+        const raw = String(row[key] || "").trim();
+        if (!raw || raw.toLowerCase() === "nan") return;
+
+        raw.split(",").forEach((part) => {
+          const value = part.trim();
+          if (!value) return;
+          counts[value] = (counts[value] || 0) + 1;
+        });
+      });
+      return counts;
+    }
+
+    function getTopEntry(counts) {
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) return null;
+      return { name: entries[0][0], count: entries[0][1] };
+    }
+
+    function renderList(elementId, counts) {
+      const container = document.getElementById(elementId);
+      container.innerHTML = "";
+
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+      entries.forEach(([name, count]) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span class="item-name">${formatLabel(name)}</span>
+          <span class="item-count">${count}</span>
+        `;
+        container.appendChild(li);
+      });
+    }
+
+    function formatLabel(label) {
+      return String(label)
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    /* ===========================
+       Amenities + scenario maps
+    =========================== */
+
+    const WALK_MINUTES = 15;
+    const WALK_SPEED_METERS_PER_MIN = 80; // ~3 mph
+    const WALK_BUFFER_RADIUS_M = WALK_MINUTES * WALK_SPEED_METERS_PER_MIN;
+
+    const SCENARIOS = [
+      { label: "Walk-only (15 min)", radiusM: 15 * 80, color: "#2b8cbe" },
+      { label: "Walk + transit (15 min total)", radiusM: 5 * 80 + 10 * 400, color: "#31a354" },
+      { label: "Walk + transit + micromobility (15 min total)", radiusM: 3 * 80 + 9 * 400 + 3 * 250, color: "#ff7f00" },
+    ];
+
+    function addCartoBase(mapInstance) {
+      return L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 20,
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+        }
+      ).addTo(mapInstance);
+    }
+
+    function isMobileViewport() {
+      return window.matchMedia && window.matchMedia("(max-width: 600px)").matches;
+    }
+
+    function addLayersPanelToggle(mapInstance, layersControl) {
+      const container = layersControl.getContainer();
+      const isMobile = isMobileViewport();
+      let isVisible = !isMobile;
+
+      if (isMobile) {
+        container.style.display = "none";
+        container.style.maxWidth = "86vw";
+        container.style.maxHeight = "55vh";
+        container.style.overflowY = "auto";
+      }
+
+      const control = L.control({ position: "bottomleft" });
+
+      control.onAdd = function () {
+        const wrapper = L.DomUtil.create("div", "leaflet-bar");
+        const button = L.DomUtil.create("a", "", wrapper);
+
+        button.href = "#";
+        button.title = "Show/Hide layer list";
+        button.textContent = isVisible ? "Hide layers" : "Show layers";
+
+        button.style.width = "auto";
+        button.style.padding = "0 10px";
+        button.style.lineHeight = "30px";
+        button.style.textDecoration = "none";
+
+        L.DomEvent.disableClickPropagation(wrapper);
+
+        L.DomEvent.on(button, "click", function (evt) {
+          L.DomEvent.preventDefault(evt);
+          isVisible = !isVisible;
+          container.style.display = isVisible ? "" : "none";
+          button.textContent = isVisible ? "Hide layers" : "Show layers";
+        });
+
+        return wrapper;
+      };
+
+      control.addTo(mapInstance);
+    }
+
+    function getAmenitySources() {
+      return [
+        {
+          label: "Groceries (King County)",
+          url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/admin__food_facilities_point/MapServer/863",
+          where: "SEAT_CAP LIKE '%Grocery%'",
+          idField: "OBJECTID",
+          popupFields: ["NAME", "SITE_ADDRESS", "CITY", "ZIPCODE", "CHAIN_NAME"],
+          bufferColor: "#2b8cbe",
+        },
+        {
+          label: "Farmers markets (King County)",
+          url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/natres___base/MapServer/853",
+          where: "1=1",
+          idField: "OBJECTID",
+          popupFields: ["NAME", "ADDRESS", "CITY", "ZIPCODE", "WEBSITE"],
+          bufferColor: "#31a354",
+        },
+        {
+          label: "Public health clinics (King County)",
+          url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/pubsafe___base/MapServer/178",
+          where: "1=1",
+          idField: "OBJECTID",
+          popupFields: ["NAME", "ADDRESS", "CITY", "ZIPCODE", "WEBSITE"],
+          bufferColor: "#e34a33",
+        },
+        {
+          label: "K-12 schools (King County)",
+          url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/admin___base/MapServer/107",
+          where: "CODE IN (660, 661, 662, 664, 666)",
+          idField: "OBJECTID",
+          popupFields: ["NAME", "FEATUREDES", "ADDRESS", "DISTRICT", "ZIPCODE"],
+          bufferColor: "#ff7f00",
+        },
+        {
+          label: "Parks (King County)",
+          url: "https://gisdata.kingcounty.gov/arcgis/rest/services/OpenDataPortal/recreatn__park_label_point/MapServer/884",
+          where: "Label_Type = 1",
+          idField: "OBJECTID",
+          popupFields: ["SiteName", "Owner", "Manager", "SiteType"],
+          bufferColor: "#2ca25f",
+        },
+      ];
+    }
+
+    function buildPopupHtml(props, fields) {
+      let html = "";
+      for (let i = 0; i < fields.length; i++) {
+        const key = fields[i];
+        const val = props[key];
+        if (val !== undefined && val !== null && String(val).trim() !== "") {
+          html += "<div><strong>" + escapeHtml(key) + ":</strong> " + escapeHtml(val) + "</div>";
+        }
+      }
+      return html || "<em>No details</em>";
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function makeClusterLayerWithBuffers(mapInstance, config) {
+      const fields = [config.idField].concat(config.popupFields);
+      const bufferLayer = L.layerGroup();
+
+      const pointsLayer = L.esri.Cluster.featureLayer({
+        url: config.url,
+        where: config.where || "1=1",
+        fields: fields,
+        simplifyFactor: 0.35,
+        precision: 5,
+        disableClusteringAtZoom: 16,
+        onEachFeature: function (feature, layer) {
+          const props = feature && feature.properties ? feature.properties : {};
+          layer.bindPopup(buildPopupHtml(props, config.popupFields));
+        },
+      });
+
+      function refreshBuffers() {
+        if (!mapInstance.hasLayer(bufferLayer)) return;
+
+        bufferLayer.clearLayers();
+
+        const query = L.esri
+          .query({ url: config.url })
+          .where(config.where || "1=1")
+          .within(mapInstance.getBounds())
+          .returnGeometry(true)
+          .limit(1000);
+
+        query.run(function (error, featureCollection) {
+          if (error) {
+            console.error("Amenities buffer query error:", config.label, error);
+            return;
+          }
+
+          const features = featureCollection && featureCollection.features ? featureCollection.features : [];
+
+          for (let i = 0; i < features.length; i++) {
+            const geom = features[i].geometry;
+            if (!geom || geom.type !== "Point") continue;
+
+            const lng = geom.coordinates[0];
+            const lat = geom.coordinates[1];
+
+            L.circle([lat, lng], {
+              radius: WALK_BUFFER_RADIUS_M,
+              color: config.bufferColor,
+              weight: 1,
+              fillColor: config.bufferColor,
+              fillOpacity: 0.08,
+            }).addTo(bufferLayer);
+          }
+        });
+      }
+
+      return { pointsLayer, bufferLayer, refreshBuffers };
+    }
+
+    function buildAmenitiesMap() {
+      const map = L.map("amenityMap").setView(DEFAULT_CENTER, 10);
+      addCartoBase(map);
+
+      const sources = getAmenitySources();
+      const pointOverlays = {};
+      const bufferOverlays = {};
+      const bufferPairs = [];
+
+      for (let i = 0; i < sources.length; i++) {
+        const src = sources[i];
+        const pair = makeClusterLayerWithBuffers(map, src);
+
+        pointOverlays[src.label] = pair.pointsLayer;
+        bufferOverlays[src.label + " (15-min walk buffer)"] = pair.bufferLayer;
+
+        bufferPairs.push({ ...pair, label: src.label });
+      }
+
+      // Default layer
+      if (pointOverlays["Groceries (King County)"]) {
+        pointOverlays["Groceries (King County)"].addTo(map);
+      }
+
+      const layersControl = L.control.layers(null, { ...pointOverlays, ...bufferOverlays }, { collapsed: isMobileViewport() })
+        .addTo(map);
+
+      addLayersPanelToggle(map, layersControl);
+
+      map.on("overlayadd", function (e) {
+        const match = bufferPairs.find((p) => p.bufferLayer === e.layer);
+        if (!match) return;
+
+        if (!map.hasLayer(match.pointsLayer)) {
+          map.addLayer(match.pointsLayer);
+        }
+
+        match.refreshBuffers();
+      });
+
+      map.on("overlayremove", function (e) {
+        const match = bufferPairs.find((p) => p.bufferLayer === e.layer);
+        if (!match) return;
+        match.bufferLayer.clearLayers();
+      });
+
+      let bufferTimer = null;
+      map.on("moveend zoomend", function () {
+        if (bufferTimer) clearTimeout(bufferTimer);
+        bufferTimer = setTimeout(function () {
+          bufferPairs.forEach((pair) => {
+            if (map.hasLayer(pair.bufferLayer)) pair.refreshBuffers();
+          });
+        }, 200);
+      });
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 0);
+    }
+
+    /* -------- Scenario map -------- */
+
+    let scenarioOrigin = L.latLng(DEFAULT_CENTER[0], DEFAULT_CENTER[1]);
+    let scenarioRingLayers = null;
+    let scenarioAmenityLayers = null;
+    let scenarioMarker = null;
+
+    function buildScenarioMap() {
+      const map = L.map("scenarioMap").setView(DEFAULT_CENTER, 11);
+      addCartoBase(map);
+
+      scenarioRingLayers = {};
+      for (let i = 0; i < SCENARIOS.length; i++) {
+        scenarioRingLayers[SCENARIOS[i].label] = L.layerGroup();
+      }
+
+      scenarioAmenityLayers = {};
+      const sources = getAmenitySources();
+      for (let j = 0; j < sources.length; j++) {
+        scenarioAmenityLayers[sources[j].label] = L.layerGroup();
+      }
+
+      // Default overlays
+      scenarioRingLayers[SCENARIOS[0].label].addTo(map);
+      scenarioRingLayers[SCENARIOS[1].label].addTo(map);
+      if (scenarioAmenityLayers["Groceries (King County)"]) {
+        scenarioAmenityLayers["Groceries (King County)"].addTo(map);
+      }
+
+      const overlays = { ...scenarioRingLayers, ...scenarioAmenityLayers };
+      const layersControl = L.control.layers(null, overlays, { collapsed: isMobileViewport() }).addTo(map);
+      addLayersPanelToggle(map, layersControl);
+
+      map.on("overlayadd overlayremove", function () {
+        redrawScenarioRings(map);
+        refreshScenarioAmenityPoints(map);
+      });
+
+      map.on("click", function (evt) {
+        setScenarioFocus(map, evt.latlng);
+      });
+
+      let scenarioTimer = null;
+      map.on("moveend zoomend", function () {
+        if (scenarioTimer) clearTimeout(scenarioTimer);
+        scenarioTimer = setTimeout(function () {
+          refreshScenarioAmenityPoints(map);
+        }, 250);
+      });
+
+      setScenarioFocus(map, scenarioOrigin);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 0);
+    }
+
+    function setScenarioFocus(map, latlng) {
+      scenarioOrigin = latlng;
+
+      if (scenarioMarker) {
+        scenarioMarker.setLatLng(latlng);
+      } else {
+        scenarioMarker = L.marker(latlng).addTo(map);
+      }
+
+      redrawScenarioRings(map);
+      refreshScenarioAmenityPoints(map);
+    }
+
+    function redrawScenarioRings(map) {
+      if (!scenarioRingLayers) return;
+
+      for (let i = 0; i < SCENARIOS.length; i++) {
+        const scenario = SCENARIOS[i];
+        const layer = scenarioRingLayers[scenario.label];
+        if (!layer) continue;
+
+        layer.clearLayers();
+        if (!map.hasLayer(layer)) continue;
+
+        const ring = L.circle(scenarioOrigin, {
+          radius: scenario.radiusM,
+          color: scenario.color,
+          weight: 2,
+          fillColor: scenario.color,
+          fillOpacity: 0.06,
+        });
+
+        ring.bindTooltip(
+          scenario.label + " — ~" + Math.round(scenario.radiusM) + " m",
+          { sticky: true }
+        );
+
+        ring.addTo(layer);
+      }
+    }
+
+    function getActiveScenariosSorted(map) {
+      const active = [];
+
+      for (let i = 0; i < SCENARIOS.length; i++) {
+        const s = SCENARIOS[i];
+        const layer = scenarioRingLayers[s.label];
+        if (layer && map.hasLayer(layer)) {
+          active.push(s);
+        }
+      }
+
+      active.sort(function (a, b) {
+        return a.radiusM - b.radiusM;
+      });
+
+      return active;
+    }
+
+    function pickScenarioForDistanceMeters(map, distanceM) {
+      const active = getActiveScenariosSorted(map);
+
+      for (let i = 0; i < active.length; i++) {
+        if (distanceM <= active[i].radiusM) return active[i];
+      }
+
+      return null;
+    }
+
+    function refreshScenarioAmenityPoints(map) {
+      if (!scenarioAmenityLayers) return;
+
+      const bounds = map.getBounds();
+      const sources = getAmenitySources();
+
+      for (let i = 0; i < sources.length; i++) {
+        const src = sources[i];
+        const layer = scenarioAmenityLayers[src.label];
+        if (!layer) continue;
+
+        if (!map.hasLayer(layer)) {
+          layer.clearLayers();
+          continue;
+        }
+
+        layer.clearLayers();
+
+        const query = L.esri
+          .query({ url: src.url })
+          .where(src.where || "1=1")
+          .within(bounds)
+          .returnGeometry(true)
+          .limit(2000);
+
+        query.run(function (error, featureCollection) {
+          if (error) {
+            console.error("Scenario amenity query error:", src.label, error);
+            return;
+          }
+
+          const features = featureCollection && featureCollection.features ? featureCollection.features : [];
+
+          for (let j = 0; j < features.length; j++) {
+            const geom = features[j].geometry;
+            if (!geom || geom.type !== "Point") continue;
+
+            const lng = geom.coordinates[0];
+            const lat = geom.coordinates[1];
+
+            const pt = L.latLng(lat, lng);
+            const distanceM = scenarioOrigin.distanceTo(pt);
+
+            const reachedBy = pickScenarioForDistanceMeters(map, distanceM);
+            const isReachable = Boolean(reachedBy);
+
+            const marker = L.circleMarker(pt, {
+              radius: 6,
+              color: isReachable ? reachedBy.color : "#888",
+              weight: isReachable ? 3 : 1,
+              fillColor: src.bufferColor,
+              fillOpacity: isReachable ? 0.9 : 0.25,
+            });
+
+            const props = features[j] && features[j].properties ? features[j].properties : {};
+
+            const extra =
+              "<div><strong>Reachable:</strong> " + (isReachable ? "Yes" : "No") + "</div>" +
+              "<div><strong>Reached by:</strong> " + (isReachable ? escapeHtml(reachedBy.label) : "None selected") + "</div>" +
+              "<div><strong>Distance:</strong> " + Math.round(distanceM) + " m</div>";
+
+            marker.bindPopup(buildPopupHtml(props, src.popupFields) + extra);
+            marker.addTo(layer);
+          }
+        });
+      }
+    }
+  </script>
 </body>
 </html>
